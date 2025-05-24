@@ -3,105 +3,113 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusDiv = document.getElementById('status');
     const dataOutputDiv = document.getElementById('dataOutput');
     
-    // The URL to your published Google Sheet CSV
     const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQgcWwiuMgzw6tonNkr1ahkPOeJqBH1OcTSPQOC7lqVWUtue9CgksQQQn2MVmw89fWJ39c-helCid4v/pub?output=csv';
     
-    const rawCsvStorageKey = 'rawSpreadsheetCsvData';
-    const jsonDataStorageKey = 'structuredSpreadsheetJsData';
+    const rawCsvStorageKey = 'rawSpreadsheetCsvData_v2'; // Changed key in case old raw data exists
+    const jsonDataStorageKey = 'structuredSpreadsheetJsData_v2'; // Changed key for new structure
 
     /**
-     * Converts a CSV string to an array of JavaScript objects.
-     * Handles quoted fields containing commas and empty cells.
+     * Parses a single line of CSV text, handling quoted fields.
+     * @param {string} line - The CSV line.
+     * @returns {string[]} An array of string values.
+     */
+    function parseCsvLine(line) {
+        const values = [];
+        let currentValue = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                if (inQuotes && i + 1 < line.length && line[i+1] === '"') { // Escaped quote ("")
+                    currentValue += '"';
+                    i++; // Skip next quote
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                values.push(currentValue); // Values will be trimmed later
+                currentValue = '';
+            } else {
+                currentValue += char;
+            }
+        }
+        values.push(currentValue); // Add the last value
+        return values.map(v => v.trim()); // Trim all parsed values
+    }
+
+    /**
+     * Converts a CSV string to an array of JavaScript objects with specific key mappings.
+     * "S.N" -> "id"
+     * "Question" -> "questionText"
      * @param {string} csv - The CSV string data.
      * @returns {Array<Object>} An array of objects.
      */
     function convertCsvToJs(csv) {
-        const trimmedCsv = csv.trim();
+        const trimmedCsv = csv.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n'); // Normalize newlines
         if (!trimmedCsv) return [];
 
         const lines = trimmedCsv.split('\n');
-        if (lines.length === 0) return [];
+        if (lines.length < 1) return []; // Need at least a header line
 
-        // Sanitize headers: trim and remove potential carriage returns
-        const headers = lines[0].split(',').map(header => header.trim().replace(/\r$/, ''));
+        const headers = parseCsvLine(lines[0]);
         const result = [];
 
         for (let i = 1; i < lines.length; i++) {
-            const currentLineContent = lines[i].trim().replace(/\r$/, '');
-            if (!currentLineContent) continue; // Skip empty lines
+            const lineContent = lines[i].trim();
+            if (!lineContent) continue; // Skip genuinely empty lines
 
+            const values = parseCsvLine(lineContent);
             const obj = {};
-            const values = [];
-            let inQuotes = false;
-            let currentValue = '';
+            let hasMeaningfulData = false; // To track if the row has any non-empty value
 
-            for (let char of currentLineContent) {
-                if (char === '"' && inQuotes && i + 1 < currentLineContent.length && currentLineContent[i+1] === '"') {
-                    // Handle escaped double quotes "" inside a quoted field
-                    currentValue += '"';
-                    i++; // Skip next quote
-                    continue;
+            headers.forEach((header, index) => {
+                const originalHeader = header; // Keep original for non-mapped keys
+                const upperHeader = header.toUpperCase();
+                const value = values[index] !== undefined ? values[index] : '';
+
+                if (value.trim() !== "") {
+                    hasMeaningfulData = true;
                 }
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    values.push(currentValue); // Don't trim here, will trim later
-                    currentValue = '';
+
+                if (upperHeader === "S.N") {
+                    obj["id"] = value;
+                } else if (upperHeader === "QUESTION") {
+                    obj["questionText"] = value;
                 } else {
-                    currentValue += char;
+                    obj[originalHeader] = value; // Use original header name for other keys
                 }
-            }
-            values.push(currentValue); // Add the last value
+            });
 
-            // Assign values to object properties based on headers
-            for (let j = 0; j < headers.length; j++) {
-                const header = headers[j];
-                const value = (values[j] !== undefined ? values[j] : '').trim(); // Trim and handle undefined
-                obj[header] = value;
+            // Only add the object if it has some data.
+            // This helps avoid pushing objects for rows that might parse as all empty strings
+            // (e.g. if there are trailing commas or blank lines that weren't fully skipped).
+            if (hasMeaningfulData) {
+                 result.push(obj);
             }
-            result.push(obj);
         }
         return result;
     }
 
     /**
-     * Displays the JavaScript data (array of objects) as an HTML table.
+     * Displays the JavaScript data (array of objects) as a pretty-printed JSON string.
      * @param {Array<Object>} data - The data to display.
      */
-    function displayDataAsTable(data) {
-        if (!data || data.length === 0) {
-            dataOutputDiv.innerHTML = '<p>No data available to display, or data is empty.</p>';
+    function displayJsDataAsText(data) {
+        if (!data) { // Handles null or undefined
+            dataOutputDiv.innerHTML = '<p>Data is not available.</p>';
             return;
         }
+        if (data.length === 0) {
+             dataOutputDiv.innerHTML = '<p>No data to display (dataset is empty).</p>';
+             return;
+        }
 
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const tbody = document.createElement('tbody');
-        const headerRow = document.createElement('tr');
-
-        // Create table headers from the keys of the first object
-        Object.keys(data[0]).forEach(key => {
-            const th = document.createElement('th');
-            th.textContent = key;
-            headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-
-        // Create table rows
-        data.forEach(item => {
-            const tr = document.createElement('tr');
-            Object.keys(data[0]).forEach(headerKey => { // Ensure consistent column order
-                const td = document.createElement('td');
-                td.textContent = item[headerKey] !== undefined ? item[headerKey] : ''; // Handle potentially missing keys in some objects
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-
+        const jsonString = JSON.stringify(data, null, 2); // Pretty print with 2 spaces indentation
+        const preElement = document.createElement('pre');
+        preElement.textContent = jsonString;
+        
         dataOutputDiv.innerHTML = ''; // Clear previous content
-        dataOutputDiv.appendChild(table);
+        dataOutputDiv.appendChild(preElement);
     }
 
     /**
@@ -114,13 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (storedJsDataString) {
             try {
                 const storedJsData = JSON.parse(storedJsDataString);
-                if (storedJsData && storedJsData.length > 0) {
-                    displayDataAsTable(storedJsData);
-                    statusDiv.textContent = `Data successfully loaded from local storage. ${storedJsData.length} records found.`;
-                } else {
-                     dataOutputDiv.innerHTML = '<p>Local storage contains empty data. Sync to fetch new data.</p>';
-                     statusDiv.textContent = 'Local storage data is empty.';
-                }
+                displayJsDataAsText(storedJsData); // This will handle empty array case
+                statusDiv.textContent = `Data successfully loaded from local storage. ${storedJsData.length || 0} records found.`;
             } catch (error) {
                 statusDiv.textContent = 'Error parsing data from local storage. It might be corrupted.';
                 console.error('Error parsing local storage data:', error);
@@ -136,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncButton.addEventListener('click', () => {
         statusDiv.textContent = 'Fetching data from spreadsheet...';
         dataOutputDiv.innerHTML = '<p><em>Processing your request...</em></p>';
-        syncButton.disabled = true; // Disable button during sync
+        syncButton.disabled = true;
 
         fetch(spreadsheetUrl)
             .then(response => {
@@ -150,21 +153,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem(rawCsvStorageKey, csvText);
                 console.log("Raw CSV data saved to local storage.");
 
-                statusDiv.textContent = 'Converting CSV to JS format...';
+                statusDiv.textContent = 'Converting CSV to JS format with custom mappings...';
                 const jsonData = convertCsvToJs(csvText);
-
-                if (jsonData.length === 0 && csvText.trim() !== "" ) {
-                     console.warn("Conversion resulted in empty JS data, but raw CSV was not empty. CSV content:", csvText);
-                     statusDiv.textContent = 'Warning: Conversion resulted in empty JS data. Check CSV format or content.';
-                } else {
-                    statusDiv.textContent = 'Conversion successful. Saving JS data to local storage...';
-                }
                 
                 localStorage.setItem(jsonDataStorageKey, JSON.stringify(jsonData));
                 console.log("Structured JS data saved to local storage:", jsonData);
 
-                statusDiv.textContent = `Data synced and saved! Displaying ${jsonData.length} records.`;
-                displayDataAsTable(jsonData);
+                statusDiv.textContent = `Data synced and saved! Displaying ${jsonData.length} records in JSON format.`;
+                displayJsDataAsText(jsonData);
             })
             .catch(error => {
                 statusDiv.textContent = `Error during sync: ${error.message}`;
@@ -172,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Sync process failed:', error);
             })
             .finally(() => {
-                syncButton.disabled = false; // Re-enable button
+                syncButton.disabled = false;
             });
     });
 
