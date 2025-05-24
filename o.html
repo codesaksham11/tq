@@ -3,22 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sync Quiz Data</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Spreadsheet Data Sync</title>
+    <link rel="stylesheet" href="o.css">
 </head>
 <body>
     <div class="container">
-        <h1>Quiz Data Sync</h1>
-        <p>Press the button below to fetch the latest question data from the Google Sheet and store it locally.</p>
+        <h1>Sync Your Spreadsheet Data</h1>
+        <p>
+            Click the button below to fetch the latest data from the Google Sheet.
+            The raw CSV will be fetched, and then converted into a JavaScript (JS) format.
+            Both the raw CSV and the JS format will be saved to your browser's local storage.
+            The table below will display the latest data loaded from local storage.
+        </p>
+        <button id="syncButton">Sync Data Now</button>
+        <div id="status">Status: Idle</div>
         
-        <button id="syncButton">Sync Latest Data</button>
-        
-        <p id="statusMessage"></p>
-
-        <h2>Stored Data Preview:</h2>
-        <pre id="jsonDataDisplay">No data synced yet.</pre>
+        <h2>Latest Synced Data (from Local Storage)</h2>
+        <div id="dataOutput">
+            <p>No data has been synced yet, or no data was found in local storage on page load.</p>
+        </div>
     </div>
 
-    <script src="js/data_sync.js"></script>
+    <script src="o.js"></script>
 </body>
 </html>
