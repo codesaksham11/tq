@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View LocalStorage JSON Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        pre { 
+            background-color: #f4f4f4; 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            white-space: pre-wrap; /* Handles long lines */
+            word-wrap: break-word; /* Breaks long words/strings */
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Content of 'structuredSpreadsheetJsData_v2' from LocalStorage</h1>
+    
+    <div id="output">
+        <p class="info">Attempting to load data...</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const outputDiv = document.getElementById('output');
+            const jsonDataStorageKey = 'structuredSpreadsheetJsData_v2';
+            const rawDataString = localStorage.getItem(jsonDataStorageKey);
+
+            if (rawDataString) {
+                outputDiv.innerHTML = `<p class="success">Data found! Displaying content:</p>`;
+                try {
+                    // Attempt to parse and re-stringify for pretty printing
+                    // If it's already well-formatted, this just ensures it.
+                    // If it's not valid JSON, this step won't happen.
+                    const parsedData = JSON.parse(rawDataString);
+                    const prettyJsonString = JSON.stringify(parsedData, null, 2);
+                    
+                    const preElement = document.createElement('pre');
+                    preElement.textContent = prettyJsonString;
+                    outputDiv.appendChild(preElement);
+
+                    outputDiv.insertAdjacentHTML('beforeend', `<p class="info">Data appears to be valid JSON. Total records (if array): ${Array.isArray(parsedData) ? parsedData.length : 'Not an array'}</p>`);
+
+                } catch (e) {
+                    // If JSON.parse fails, display the raw string as it might give clues
+                    outputDiv.innerHTML += `<p class="error">Could not parse data as JSON. Error: ${e.message}. Displaying raw string:</p>`;
+                    const preElement = document.createElement('pre');
+                    preElement.textContent = rawDataString;
+                    outputDiv.appendChild(preElement);
+                }
+            } else {
+                outputDiv.innerHTML = `<p class="error">Key '${jsonDataStorageKey}' not found in localStorage. Please ensure data has been synced by o.js.</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
