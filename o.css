@@ -71,33 +71,24 @@ p {
     background-color: #f9f9f9;
     border-radius: 4px;
     min-height: 100px;
-    max-height: 500px; /* Limit height and make it scrollable */
-    overflow: auto;     /* Add scrollbars if content overflows */
+    max-height: 600px; /* Adjust as needed */
+    overflow: auto;
 }
 
-#dataOutput p {
+#dataOutput p { /* For placeholder text */
     color: #666;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-th, td {
-    border: 1px solid #ccc;
-    padding: 10px;
-    text-align: left;
+#dataOutput pre {
+    white-space: pre-wrap;    /* CSS3 */
+    white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+    white-space: -pre-wrap;   /* Opera 4-6 */
+    white-space: -o-pre-wrap;  /* Opera 7 */
+    word-wrap: break-word;    /* Internet Explorer 5.5+ */
+    background-color: #eef; /* Light background for the JSON block */
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #cce;
+    font-family: "Courier New", Courier, monospace; /* Monospaced font for code */
     font-size: 0.9em;
-    word-break: break-word; /* Break long words to prevent overflow */
 }
-
-th {
-    background-color: #e2e2e2;
-    font-weight: bold;
-}
-
-tr:nth-child(even) {
-    background-color: #f8f8f8;
-} 
