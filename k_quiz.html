@@ -4,7 +4,316 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz in Progress</title>
-    <link rel="stylesheet" href="k_quiz.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .quiz-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .back-arrow {
+            font-size: 1.5rem;
+            text-decoration: none;
+            color: #667eea;
+            font-weight: bold;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .back-arrow:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .timer {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            border: 2px solid #e74c3c;
+        }
+
+        .quiz-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .quiz-info {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .quiz-info h1 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .quiz-info p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .question-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .question-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .question-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .question-number {
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-right: 1rem;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #333;
+            flex: 1;
+        }
+
+        .options-container {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .option {
+            background: rgba(255, 255, 255, 0.7);
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .option:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .option label {
+            cursor: pointer;
+            display: block;
+            font-size: 1.1rem;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .option label::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .option input[type="radio"]:checked + label::before {
+            border-color: #667eea;
+            background: #667eea;
+            box-shadow: inset 0 0 0 3px white;
+        }
+
+        .option input[type="radio"]:checked + label {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .option:has(input[type="radio"]:checked) {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.15);
+        }
+
+        .submit-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            bottom: 2rem;
+            margin-top: 2rem;
+        }
+
+        .submit-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading-message, .error-message {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            border: 2px solid #e74c3c;
+        }
+
+        .error-message a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .error-message a:hover {
+            text-decoration: underline;
+        }
+
+        .progress-indicator {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 0.5rem;
+            font-weight: 500;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .quiz-header {
+                padding: 1rem;
+            }
+
+            .quiz-container {
+                margin: 1rem auto;
+                padding: 0 0.5rem;
+            }
+
+            .question-card {
+                padding: 1.5rem;
+            }
+
+            .question-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .question-number {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+
+            .submit-section {
+                padding: 1.5rem;
+            }
+
+            .submit-button {
+                padding: 1rem 2rem;
+                font-size: 1.1rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="quiz-header">
@@ -12,34 +321,35 @@
         <div id="timer" class="timer">00:00</div>
     </div>
 
-    <div class="progress-container">
-        <div id="progressBar" class="progress-bar">
-            <div id="progressFill" class="progress-fill"></div>
-        </div>
-    </div>
-
     <div class="quiz-container">
-        <div id="quizContent">
-            <h2 id="questionNumber">Question X of Y</h2>
-            <p id="questionText">Loading question...</p>
-            <div id="optionsContainer" class="options-container">
-                <!-- Options will be dynamically inserted here -->
+        <div id="quizContent" style="display: none;">
+            <div class="quiz-info">
+                <h1>Quiz Started</h1>
+                <p id="quizDescription">Answer all questions below and submit when ready.</p>
             </div>
-            <div id="feedback" class="feedback"></div>
-            
-            <div class="navigation-buttons">
-                <button id="prevButton" class="nav-button prev-button">← Previous</button>
-                <button id="nextButton" class="nav-button next-button">Next →</button>
+
+            <div class="progress-indicator">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <div id="progressText" class="progress-text">0 of 0 questions answered</div>
+            </div>
+
+            <div id="questionsContainer">
+                <!-- Questions will be dynamically inserted here -->
+            </div>
+
+            <div class="submit-section">
                 <button id="submitButton" class="submit-button">Submit Quiz</button>
             </div>
         </div>
-        
+
         <div id="loadingMessage" class="loading-message">
             Loading quiz data... Please wait.
         </div>
-        
+
         <div id="errorMessage" class="error-message" style="display:none;">
-             Error loading quiz. Please <a href="k.html">go back</a> and try again.
+            Error loading quiz. Please <a href="k.html">go back</a> and try again.
         </div>
     </div>
 
