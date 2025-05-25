@@ -3,35 +3,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Get DOM elements
     const timerEl = document.getElementById('timer');
-    const questionsContainerEl = document.getElementById('questionsContainer');
-    const submitButton = document.getElementById('submitButton');
-    const quizContentEl = document.getElementById('quizContent');
+    const allQuestionsContainerEl = document.getElementById('allQuestionsContainer');
+    const submitQuizButton = document.getElementById('submitQuizButton');
     const loadingMessageEl = document.getElementById('loadingMessage');
     const errorMessageEl = document.getElementById('errorMessage');
-    const progressFillEl = document.getElementById('progressFill');
-    const progressTextEl = document.getElementById('progressText');
-    const quizDescriptionEl = document.getElementById('quizDescription');
 
     // Ensure critical DOM elements for error display are found
     if (!loadingMessageEl) console.error("k_quiz.js CRITICAL: loadingMessageEl not found!");
-    if (!quizContentEl) console.error("k_quiz.js CRITICAL: quizContentEl not found!");
+    if (!allQuestionsContainerEl) console.error("k_quiz.js CRITICAL: allQuestionsContainerEl not found!");
     if (!errorMessageEl) console.error("k_quiz.js CRITICAL: errorMessageEl not found!");
 
     let allQuestions = [];
     let selectedQuestions = [];
-    let userAnswers = [];
     let timeLeft = 0;
     let timerInterval;
-    let startTime = 0;
+    let startTime = 0; // Will be set in initializeQuiz or startTimer
     let quizTimeMinutes = 0;
     let numQuestionsToAsk = 0;
+
 
     // --- showError Function (defined early) ---
     function showError(message) {
         console.error("k_quiz.js - SHOW_ERROR CALLED:", message);
         if (timerInterval) clearInterval(timerInterval);
         if (loadingMessageEl) loadingMessageEl.style.display = 'none';
-        if (quizContentEl) quizContentEl.style.display = 'none';
+        if (allQuestionsContainerEl) allQuestionsContainerEl.style.display = 'none';
+        if (submitQuizButton) submitQuizButton.style.display = 'none';
         if (errorMessageEl) {
             errorMessageEl.innerHTML = message + ' Please <a href="k.html">go back</a>, check console, and try again.';
             errorMessageEl.style.display = 'block';
@@ -54,11 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return String(unsafe);
         }
         return unsafe
-             .replace(/&/g, "&amp;")
-             .replace(/</g, "&lt;")
-             .replace(/>/g, "&gt;")
-             .replace(/"/g, "&quot;")
-             .replace(/'/g, "&#x27;");
+             .replace(/&/g, "&")
+             .replace(/</g, "<")
+             .replace(/>/g, ">")
+             .replace(/"/g, """)
+             .replace(/'/g, "'");
     }
 
     function formatTime(seconds) {
@@ -82,12 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return result;
     }
 
-    function generateOptions(currentQ) {
+    function generateOptions(currentQ, allQuestionsPool) { // allQuestionsPool passed for class-based distractors
         console.log(`k_quiz.js: generateOptions for Q ID: ${currentQ.id}, Text: "${currentQ.questionText}", Type: ${currentQ.Type}, Class: ${currentQ.Class}, Answer: "${currentQ.Answer}"`);
         let options = [];
         const correctAnswer = currentQ.Answer;
 
-        if (typeof correctAnswer === 'undefined' || correctAnswer === null || correctAnswer.toString().trim() === '') {
+        if (typeof correctAnswer === 'undefined' || correctAnswer === null || String(correctAnswer).trim() === '') {
             console.warn(`k_quiz.js: Question ID ${currentQ.id} has an invalid Answer. This is problematic.`);
             options.push("Error: Correct answer missing");
         } else {
@@ -102,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentQ.Type && currentQ.Type.toLowerCase() === 'class' && currentQ.Class) {
             const currentQuestionClass = String(currentQ.Class).trim();
             console.log(`k_quiz.js: Q ID ${currentQ.id} is "class" type (${currentQuestionClass}). Finding distractors from same class.`);
-            const sameClassDistractors = allQuestions
+            const sameClassDistractors = allQuestionsPool // Use the passed pool
                 .filter(q => q.id !== currentQ.id && String(q.Class).trim() === currentQuestionClass && typeof q.Answer !== 'undefined' && String(q.Answer).trim() !== "")
                 .map(q => q.Answer);
             
@@ -119,15 +116,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn(`k_quiz.js: Q ID ${currentQ.id} has an unknown Type "${currentQ.Type}" or missing Class for "class" type. Only correct answer will be an option initially.`);
         }
 
-        // Ensure enough options, even if it means fewer than 4
         options = [...new Set(options.map(opt => (typeof opt === 'undefined' || opt === null) ? "N/A" : String(opt)))];
         shuffleArray(options);
         const finalOptions = options.slice(0, 4);
         
-        // If not enough unique options were found, pad with generic distractors
         const genericPlaceholders = ["Option A", "Option B", "Option C", "Option D"];
         let placeholderIdx = 0;
-        while(finalOptions.length < 2 && finalOptions.length < 4) {
+        while(finalOptions.length < 2 && finalOptions.length < 4) { // Ensure at least 2 options, ideally 4
             const placeholder = genericPlaceholders[placeholderIdx++];
             if (!finalOptions.includes(placeholder)) {
                 finalOptions.push(placeholder);
@@ -140,89 +135,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayAllQuestions() {
-        console.log(`k_quiz.js: displayAllQuestions called for ${selectedQuestions.length} questions`);
-        
+        console.log(`k_quiz.js: displayAllQuestions called. Total selected: ${selectedQuestions.length}`);
+        if (!allQuestionsContainerEl) {
+            showError("Critical Error: Main questions container 'allQuestionsContainerEl' is missing.");
+            return;
+        }
+        allQuestionsContainerEl.innerHTML = ''; // Clear previous content
+
         if (selectedQuestions.length === 0) {
             console.log("k_quiz.js: No questions to display.");
-            questionsContainerEl.innerHTML = '<p>No questions available for this quiz configuration.</p>';
+            allQuestionsContainerEl.innerHTML = "<p>No questions are available for this quiz configuration.</p>";
+            if(submitQuizButton) submitQuizButton.style.display = 'none';
             return;
         }
 
-        questionsContainerEl.innerHTML = '';
-
         selectedQuestions.forEach((question, index) => {
-            const questionCard = document.createElement('div');
-            questionCard.classList.add('question-card');
-            questionCard.dataset.questionIndex = index;
+            if (!question) {
+                console.error(`k_quiz.js: Question object at index ${index} is undefined. Skipping.`);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'question-block';
+                errorDiv.innerHTML = `<h3>Error</h3><p>Could not load question ${index + 1}.</p>`;
+                allQuestionsContainerEl.appendChild(errorDiv);
+                return;
+            }
+            console.log(`k_quiz.js: Displaying Q ID: ${question.id}, Text: "${question.questionText}"`);
 
-            const options = generateOptions(question);
-            
-            let optionsHtml = '';
+            const questionBlock = document.createElement('div');
+            questionBlock.className = 'question-block';
+            questionBlock.id = `question-block-${index}`;
+
+            const questionNumberHeader = document.createElement('h3');
+            questionNumberHeader.textContent = `Question ${index + 1}`;
+            questionBlock.appendChild(questionNumberHeader);
+
+            const questionTextP = document.createElement('p');
+            questionTextP.className = 'question-text-item';
+            questionTextP.textContent = question.questionText || "(Error: Question text missing)";
+            questionBlock.appendChild(questionTextP);
+
+            const optionsDiv = document.createElement('div');
+            optionsDiv.className = 'options-item-container';
+            optionsDiv.id = `options-q-${index}`;
+
+            const options = generateOptions(question, allQuestions); // Pass allQuestions for context
+
             if (!options || options.length === 0) {
-                optionsHtml = '<p style="color: red;">Error: Could not load options for this question.</p>';
+                console.warn(`k_quiz.js: No options generated for Q ID: ${question.id}.`);
+                const p = document.createElement('p');
+                p.textContent = "Error: Could not load options for this question.";
+                p.style.color = "red";
+                optionsDiv.appendChild(p);
             } else {
                 options.forEach((optionText, optionIndex) => {
                     const optionId = `q${index}_option${optionIndex}`;
+                    const div = document.createElement('div');
+                    div.classList.add('option');
+                    
                     const displayOptionText = escapeHtml(optionText);
-                    const valueOptionText = escapeHtml(optionText);
+                    const valueOptionText = escapeHtml(optionText); // Value should also be escaped if used directly
 
-                    optionsHtml += `
-                        <div class="option">
-                            <input type="radio" id="${optionId}" name="question_${index}" value="${valueOptionText}">
-                            <label for="${optionId}">${displayOptionText}</label>
-                        </div>
+                    div.innerHTML = `
+                        <input type="radio" id="${optionId}" name="q${index}_option" value="${valueOptionText}">
+                        <label for="${optionId}">${displayOptionText}</label>
                     `;
+                    optionsDiv.appendChild(div);
                 });
             }
-
-            questionCard.innerHTML = `
-                <div class="question-header">
-                    <div class="question-number">${index + 1}</div>
-                    <div class="question-text">${escapeHtml(question.questionText || "(Error: Question text missing)")}</div>
-                </div>
-                <div class="options-container">
-                    ${optionsHtml}
-                </div>
-            `;
-
-            questionsContainerEl.appendChild(questionCard);
+            questionBlock.appendChild(optionsDiv);
+            allQuestionsContainerEl.appendChild(questionBlock);
         });
-
-        // Add event listeners for progress tracking
-        addProgressTrackingListeners();
-        updateProgress();
-        
-        console.log(`k_quiz.js: All ${selectedQuestions.length} questions displayed.`);
-    }
-
-    function addProgressTrackingListeners() {
-        const allRadios = questionsContainerEl.querySelectorAll('input[type="radio"]');
-        allRadios.forEach(radio => {
-            radio.addEventListener('change', updateProgress);
-        });
-    }
-
-    function updateProgress() {
-        const totalQuestions = selectedQuestions.length;
-        let answeredQuestions = 0;
-
-        for (let i = 0; i < totalQuestions; i++) {
-            const questionRadios = questionsContainerEl.querySelectorAll(`input[name="question_${i}"]`);
-            const isAnswered = Array.from(questionRadios).some(radio => radio.checked);
-            if (isAnswered) answeredQuestions++;
-        }
-
-        const progressPercentage = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
-        
-        if (progressFillEl) {
-            progressFillEl.style.width = `${progressPercentage}%`;
-        }
-        
-        if (progressTextEl) {
-            progressTextEl.textContent = `${answeredQuestions} of ${totalQuestions} questions answered`;
-        }
-
-        console.log(`Progress: ${answeredQuestions}/${totalQuestions} (${progressPercentage.toFixed(1)}%)`);
+        if(submitQuizButton) submitQuizButton.style.display = 'block';
+        console.log(`k_quiz.js: All questions display setup complete.`);
     }
 
     function startTimer() {
@@ -231,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("k_quiz.js: Timer element not found. Timer will not start.");
             return;
         }
-        startTime = Date.now();
+        startTime = Date.now(); // Set startTime when timer actually begins
         timeLeft = quizTimeMinutes * 60;
         timerEl.textContent = formatTime(timeLeft);
         
@@ -243,60 +226,64 @@ document.addEventListener('DOMContentLoaded', () => {
             if (timeLeft <= 0) {
                 console.log("k_quiz.js: Time is up!");
                 clearInterval(timerInterval);
-                handleSubmitQuiz("Time Out");
+                submitAndFinalize("Time Out"); // Auto-submit when time is up
             }
         }, 1000);
         console.log("k_quiz.js: Timer started. Time left:", timeLeft);
     }
 
-    function collectUserAnswers() {
-        userAnswers = [];
-        
+    function collectAllUserAnswers() {
+        console.log("k_quiz.js: collectAllUserAnswers called.");
+        const answers = [];
         selectedQuestions.forEach((question, index) => {
-            const questionRadios = questionsContainerEl.querySelectorAll(`input[name="question_${index}"]`);
-            const selectedRadio = Array.from(questionRadios).find(radio => radio.checked);
-            
-            const allOptions = Array.from(questionsContainerEl.querySelectorAll(`input[name="question_${index}"]`))
-                .map(radio => radio.nextElementSibling.textContent);
-            
-            const userAnswer = selectedRadio ? selectedRadio.value : null;
-            const correctAnswer = String(question.Answer);
-            
-            userAnswers.push({
+            const optionsForThisQuestion = Array.from(
+                allQuestionsContainerEl.querySelectorAll(`#options-q-${index} label`)
+            ).map(l => l.textContent);
+
+            const selectedOptionInput = allQuestionsContainerEl.querySelector(`input[name="q${index}_option"]:checked`);
+            const userAnswer = selectedOptionInput ? selectedOptionInput.value : null; // Store null if not answered
+            const correctAnswer = question.Answer;
+
+            console.log(`k_quiz.js: Q ID ${question.id} (Index ${index}) - User answer: "${userAnswer}", Correct answer: "${correctAnswer}"`);
+
+            answers.push({
                 questionId: question.id,
                 questionText: question.questionText,
-                options: allOptions,
-                correctAnswer: correctAnswer,
-                userAnswer: userAnswer,
-                isCorrect: userAnswer !== null && String(userAnswer) === correctAnswer
+                options: optionsForThisQuestion,
+                correctAnswer: String(correctAnswer),
+                userAnswer: userAnswer !== null ? String(userAnswer) : null, // Ensure string or null
+                isCorrect: userAnswer !== null && String(userAnswer) === String(correctAnswer)
             });
         });
-        
-        console.log("k_quiz.js: User answers collected:", userAnswers);
+        console.log("k_quiz.js: All user answers collected:", answers);
+        return answers;
     }
 
-    function handleSubmitQuiz(status = "Completed") {
-        console.log(`k_quiz.js: handleSubmitQuiz called with status: ${status}`);
-        
+
+    function submitAndFinalize(status) {
+        console.log(`k_quiz.js: submitAndFinalize called with status: ${status}`);
         if (timerInterval) clearInterval(timerInterval);
-        
-        collectUserAnswers();
+        if (submitQuizButton) submitQuizButton.disabled = true; // Prevent multiple submissions
+
+        const userAnswersCollected = collectAllUserAnswers();
         
         const endTime = Date.now();
-        const timeTakenMs = endTime - startTime;
-        const timeTakenSec = startTime === 0 ? quizTimeMinutes * 60 : Math.round(timeTakenMs / 1000);
+        // If startTime wasn't set (e.g., quiz loaded but timer didn't start due to immediate error or 0 questions),
+        // timeTakenSec will default to full quiz time if status is Time Out, or 0 otherwise.
+        const timeTakenMs = startTime > 0 ? endTime - startTime : (status === "Time Out" ? quizTimeMinutes * 60 * 1000 : 0);
+        const timeTakenSec = Math.round(timeTakenMs / 1000);
+
 
         let quizResults = {
             totalQuestionsAsked: selectedQuestions.length,
-            answeredQuestionsDetail: userAnswers,
+            answeredQuestionsDetail: userAnswersCollected,
             status: status,
             timeTaken: status === "Time Out" ? quizTimeMinutes * 60 : timeTakenSec,
             maxTime: quizTimeMinutes * 60,
-            score: userAnswers.filter(ans => ans.isCorrect).length
+            score: userAnswersCollected.filter(ans => ans.isCorrect).length
         };
 
         console.log("k_quiz.js: Quiz results prepared:", quizResults);
-        
         try {
             localStorage.setItem('quizResults', JSON.stringify(quizResults));
             console.log("k_quiz.js: Quiz results saved to localStorage.");
@@ -312,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initializeQuiz() {
         console.log("k_quiz.js: initializeQuiz() called.");
-        startTime = 0;
+        startTime = 0; // Reset start time, will be set when timer starts
 
         if (allQuestions.length < numQuestionsToAsk && numQuestionsToAsk > 0 && allQuestions.length > 0) {
             console.warn(`k_quiz.js: Requested ${numQuestionsToAsk} questions, but only ${allQuestions.length} are available in total. Using all ${allQuestions.length} available.`);
@@ -324,36 +311,30 @@ document.addEventListener('DOMContentLoaded', () => {
             showError(`No questions could be selected for the quiz. Source has ${allQuestions.length} questions, ${numQuestionsToAsk} were requested. Check data or parameters.`);
             return; 
         }
-        
         console.log(`k_quiz.js: ${selectedQuestions.length} questions selected for this quiz session.`);
         
-        // Update quiz description
-        if (quizDescriptionEl) {
-            quizDescriptionEl.textContent = `Answer all ${selectedQuestions.length} questions below. Time limit: ${quizTimeMinutes} minutes.`;
-        }
-        
-        userAnswers = [];
-        
-        console.log("k_quiz.js: Attempting to update UI (hide loading, show quiz)...");
         if (loadingMessageEl) loadingMessageEl.style.display = 'none';
-        if (quizContentEl) quizContentEl.style.display = 'block';
+        if (allQuestionsContainerEl) allQuestionsContainerEl.style.display = 'block'; // Show main container
         console.log("k_quiz.js: UI update to show quiz content complete.");
 
+        displayAllQuestions(); // Display all selected questions
+
         if (selectedQuestions.length > 0) {
-            displayAllQuestions();
             startTimer();
+            if(submitQuizButton) {
+                submitQuizButton.style.display = 'block';
+                submitQuizButton.disabled = false;
+            }
         } else {
             console.log("k_quiz.js: No questions to display (0 selected or 0 requested). Quiz will not start.");
-            if (questionsContainerEl) questionsContainerEl.innerHTML = '<p>No questions are available for this quiz configuration.</p>';
-            if (submitButton) submitButton.style.display = 'none';
-            if (timerEl) timerEl.textContent = "00:00";
+            if(timerEl) timerEl.textContent = "00:00";
+            if(submitQuizButton) submitQuizButton.style.display = 'none';
         }
     }
 
-    // MAIN INITIALIZATION - NOW INSIDE DOMContentLoaded
+    // MAIN INITIALIZATION
     console.log("k_quiz.js: Attempting to load data from localStorage.");
     
-    // Try to get data from localStorage with error handling
     let quizTimeStr, numQuestionsStr, allQuestionsDataString;
     
     try {
@@ -377,14 +358,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log("k_quiz.js: All required localStorage items found.");
 
-    quizTimeMinutes = parseInt(quizTimeStr, 10);
-    numQuestionsToAsk = parseInt(numQuestionsStr, 10);
+    quizTimeMinutes = parseInt(quizTimeStr, 10); // Assign to global scope for this script
+    numQuestionsToAsk = parseInt(numQuestionsStr, 10); // Assign to global scope
 
-    if (isNaN(quizTimeMinutes) || quizTimeMinutes <= 0 || isNaN(numQuestionsToAsk) || numQuestionsToAsk <= 0) {
-        showError(`Invalid time (${quizTimeStr}) or number of questions (${numQuestionsStr}). Must be positive numbers set in k.html.`);
+    if (isNaN(quizTimeMinutes) || quizTimeMinutes <= 0 || isNaN(numQuestionsToAsk)) { // numQuestionsToAsk can be 0 if user wants all available
+        showError(`Invalid time (${quizTimeStr}) or number of questions (${numQuestionsStr}). Time must be positive. Number of questions must be a non-negative integer.`);
         return;
     }
-    console.log(`k_quiz.js: Quiz params: Time=${quizTimeMinutes}m, Questions=${numQuestionsToAsk}`);
+    if (numQuestionsToAsk < 0) { // Specifically check for negative
+        showError(`Number of questions (${numQuestionsStr}) cannot be negative.`);
+        return;
+    }
+    console.log(`k_quiz.js: Quiz params: Time=${quizTimeMinutes}m, Questions=${numQuestionsToAsk === 0 ? 'All Available' : numQuestionsToAsk}`);
+
 
     try {
         console.log("k_quiz.js: Attempting JSON.parse on question data...");
@@ -393,4 +379,27 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error("Parsed question data is not an array.");
         }
         console.log(`k_quiz.js: JSON.parse successful. ${allQuestions.length} total questions loaded from storage.`);
-        if (allQuestions.length ===
+        if (allQuestions.length === 0 && numQuestionsToAsk > 0) { // Only an error if asking for questions but none exist
+             showError("Question data from storage is an empty array, but questions were requested. Please check synced data.");
+             return;
+        }
+        if (numQuestionsToAsk === 0) { // If 0 is specified, it means use all available questions
+            numQuestionsToAsk = allQuestions.length;
+            console.log(`k_quiz.js: numQuestionsToAsk was 0, now set to all available: ${numQuestionsToAsk}`);
+        }
+
+    } catch (e) {
+        showError(`Error parsing question data from storage: ${e.message}. The data might be corrupted.`);
+        console.error("Data string that failed parsing (first 500 chars):", allQuestionsDataString ? allQuestionsDataString.substring(0,500) : "null");
+        return;
+    }
+
+    if (submitQuizButton) {
+        submitQuizButton.addEventListener('click', () => submitAndFinalize("Completed"));
+    } else {
+        console.error("k_quiz.js CRITICAL: Submit Quiz button not found. Quiz submission will not work.");
+    }
+
+    console.log("k_quiz.js: All initial setup and function definitions complete. Calling initializeQuiz().");
+    initializeQuiz();
+});
