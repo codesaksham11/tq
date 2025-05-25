@@ -72,22 +72,29 @@ body {
     text-decoration: underline;
 }
 
-#questionNumber {
-    font-size: 0.9em;
-    color: #666;
-    margin-bottom: 5px;
-    text-align: right;
+/* Styles for the new multi-question display */
+#allQuestionsContainer {
+    margin-bottom: 25px;
 }
 
-#questionText {
-    font-size: 1.4em;
+.question-block {
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.question-block h3 { /* Question text within each block */
+    font-size: 1.3em; /* Adjusted from original #questionText */
     color: #333;
-    margin-bottom: 25px;
-    line-height: 1.5;
+    margin-top: 0;
+    margin-bottom: 15px;
+    line-height: 1.4;
 }
 
-.options-container {
-    margin-bottom: 25px;
+.options-container { /* This class is used inside each question-block */
+    margin-bottom: 0; /* No extra margin as question-block has margin-bottom */
 }
 
 .option {
@@ -109,6 +116,7 @@ body {
 .option input[type="radio"] {
     margin-right: 10px;
     transform: scale(1.2); /* Make radio slightly larger */
+    cursor: pointer;
 }
 
 .option label {
@@ -117,7 +125,8 @@ body {
     color: #495057;
 }
 
-#nextButton {
+/* Styles for the submit button */
+#submitQuizButton {
     background-color: #007bff;
     color: white;
     padding: 12px 25px;
@@ -130,11 +139,11 @@ body {
     margin-top: 15px;
 }
 
-#nextButton:hover {
+#submitQuizButton:hover {
     background-color: #0056b3;
 }
 
-#nextButton:disabled {
+#submitQuizButton:disabled { /* Though it might not be explicitly disabled in the new JS */
     background-color: #cccccc;
     cursor: not-allowed;
 }
@@ -143,6 +152,7 @@ body {
     margin-top: 10px;
     font-style: italic;
     color: #d9534f; /* Red for errors or reminders */
+    text-align: center; /* Centering feedback if it's general */
 }
 
 /* Responsive adjustments */
@@ -156,13 +166,13 @@ body {
     .quiz-container {
         padding: 15px;
     }
-    #questionText {
-        font-size: 1.2em;
+    .question-block h3 { /* Question text within each block */
+        font-size: 1.1em;
     }
     .option {
         padding: 10px;
     }
-    #nextButton {
+    #submitQuizButton {
         font-size: 1em;
     }
 }
