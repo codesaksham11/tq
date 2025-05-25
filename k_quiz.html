@@ -5,19 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz in Progress</title>
     <link rel="stylesheet" href="k_quiz.css">
-    <style>
-        /* Add some basic styling for multiple questions */
-        .question-block {
-            border: 1px solid #eee;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-        }
-        .question-block h3 {
-            margin-top: 0;
-        }
-    </style>
 </head>
 <body>
     <div class="quiz-header">
@@ -25,18 +12,32 @@
         <div id="timer" class="timer">00:00</div>
     </div>
 
+    <div class="progress-container">
+        <div id="progressBar" class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+    </div>
+
     <div class="quiz-container">
         <div id="quizContent">
-            <!-- Questions will be dynamically inserted here in blocks -->
-            <div id="allQuestionsContainer">
-                <!-- Placeholder for all question blocks -->
+            <h2 id="questionNumber">Question X of Y</h2>
+            <p id="questionText">Loading question...</p>
+            <div id="optionsContainer" class="options-container">
+                <!-- Options will be dynamically inserted here -->
             </div>
             <div id="feedback" class="feedback"></div>
-            <button id="submitQuizButton">Submit Quiz</button> {/* Changed ID and Text */}
+            
+            <div class="navigation-buttons">
+                <button id="prevButton" class="nav-button prev-button">← Previous</button>
+                <button id="nextButton" class="nav-button next-button">Next →</button>
+                <button id="submitButton" class="submit-button">Submit Quiz</button>
+            </div>
         </div>
+        
         <div id="loadingMessage" class="loading-message">
             Loading quiz data... Please wait.
         </div>
+        
         <div id="errorMessage" class="error-message" style="display:none;">
              Error loading quiz. Please <a href="k.html">go back</a> and try again.
         </div>
