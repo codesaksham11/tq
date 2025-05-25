@@ -6,129 +6,102 @@
     <title>Quiz in Progress</title>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: Arial, sans-serif;
             margin: 0;
-            background-color: #f4f4f4;
+            padding: 20px;
+            background-color: #f4f4f9;
             color: #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
         }
-
         .quiz-header {
-            background-color: #333;
-            color: white;
-            padding: 10px 20px;
-            width: 100%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-sizing: border-box;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .back-arrow {
-            color: white;
-            text-decoration: none;
-            font-size: 1.5em;
-            margin-right: 15px;
-        }
-
-        .timer {
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-
-        .quiz-container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 800px;
-            margin-top: 20px;
             margin-bottom: 20px;
         }
-
-        #allQuestionsContainer .question-block {
+        .back-arrow {
+            font-size: 24px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .back-arrow:hover {
+            color: #0056b3;
+        }
+        .timer {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        .quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .question-block {
             margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
         }
-        #allQuestionsContainer .question-block:last-child {
-            border-bottom: none;
-        }
-
         .question-block h3 {
-            margin-top: 0;
-            color: #555;
+            margin: 0 0 10px;
+            font-size: 18px;
         }
-
-        .question-text-item {
-            font-size: 1.1em;
+        .question-text {
+            font-size: 16px;
             margin-bottom: 15px;
-            line-height: 1.6;
         }
-
-        .options-item-container .option {
-            margin-bottom: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.2s;
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
-
-        .options-item-container .option:hover {
-            background-color: #f0f0f0;
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-
-        .options-item-container .option input[type="radio"] {
-            margin-right: 10px;
-            vertical-align: middle;
+        .option input[type="radio"] {
+            margin: 0;
         }
-        .options-item-container .option label {
-            vertical-align: middle;
+        .option label {
+            font-size: 14px;
             cursor: pointer;
         }
-
-        #submitQuizButton {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-size: 1.1em;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.2s;
+        .submit-button {
             display: block;
             width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
             margin-top: 20px;
         }
-
-        #submitQuizButton:hover {
+        .submit-button:hover {
             background-color: #218838;
         }
-        #submitQuizButton:disabled {
-            background-color: #ccc;
+        .submit-button:disabled {
+            background-color: #6c757d;
             cursor: not-allowed;
         }
-
-
         .loading-message, .error-message {
             text-align: center;
+            font-size: 16px;
             padding: 20px;
-            font-size: 1.2em;
         }
-
         .error-message {
-            color: red;
+            color: #dc3545;
+            display: none;
         }
         .error-message a {
             color: #007bff;
+            text-decoration: none;
+        }
+        .error-message a:hover {
             text-decoration: underline;
         }
     </style>
@@ -140,17 +113,15 @@
     </div>
 
     <div class="quiz-container">
-        <div id="allQuestionsContainer">
+        <div id="quizContent">
             <!-- Questions will be dynamically inserted here -->
         </div>
-        
-        <button id="submitQuizButton" style="display:none;">Submit Quiz</button>
-        
+        <button id="submitButton" class="submit-button" disabled>Submit Quiz</button>
         <div id="loadingMessage" class="loading-message">
-            
+            Loading quiz data... Please wait.
         </div>
-        <div id="errorMessage" class="error-message" style="display:none;">
-             Error loading quiz. Please <a href="k.html">go back</a> and try again.
+        <div id="errorMessage" class="error-message">
+            Error loading quiz. Please <a href="k.html">go back</a> and try again.
         </div>
     </div>
 
